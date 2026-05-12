@@ -37,8 +37,14 @@
 #include <cstring>
 #include <cctype>
 
-#include <unistd.h>
 #include <csignal>
+#ifdef _WIN32
+#include <windows.h>
+#define popen _popen
+#define pclose _pclose
+#else
+#include <unistd.h>
+#endif
 
 static bool abort_flag = false;
 static std::atomic<bool> mem_spans_watcher_running(false);
@@ -512,7 +518,10 @@ int main(int argc, char *argv[])
 				switch (event.window.event)
 				{
 				case SDL_WINDOWEVENT_CLOSE:
-					emulator.Shutdown();
+					if (event.window.windowID == SDL_GetWindowID(emulator.window))
+						emulator.Shutdown();
+					else if (event.window.windowID == ui.GetWindowId() && ui.IsVisible())
+						ui.ToggleVisible();
 					break;
 				case SDL_WINDOWEVENT_RESIZED:
 					 if (!emulator.IsResizable())
@@ -540,6 +549,11 @@ int main(int argc, char *argv[])
 			case SDL_TEXTINPUT:
 			case SDL_MOUSEMOTION:
 			case SDL_MOUSEWHEEL:
+				if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_F12 && event.key.repeat == 0)
+				{
+					ui.ToggleVisible();
+					break;
+				}
 				ImGui_ImplSDL2_ProcessEvent(&event);
 				if(SDL_GetKeyboardFocus()!=emulator.window && SDL_GetMouseFocus()!=emulator.window)
 				{
@@ -573,6 +587,13 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+{
+	return main(__argc, __argv);
+}
+#endif
+
 #define MEM_SPANS_CONFIG_POLLING_INTERVAL 1 /* seconds */
 void StartMemSpansConfigWatcherThread(const std::string &path) {
 	StopMemSpansConfigWatcherThread();
@@ -597,7 +618,7 @@ void StartMemSpansConfigWatcherThread(const std::string &path) {
                 DebugUi::UpdateMarkedSpans({});
                 last_mtime = 0L;
             }
-            sleep(MEM_SPANS_CONFIG_POLLING_INTERVAL);
+            std::this_thread::sleep_for(std::chrono::seconds(MEM_SPANS_CONFIG_POLLING_INTERVAL));
         }
 #pragma clang diagnostic pop
 	});

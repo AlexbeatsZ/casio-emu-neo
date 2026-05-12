@@ -6,6 +6,7 @@
 #include "../Emulator.hpp"
 #include "../Chipset/Chipset.hpp"
 
+#include <cstddef>
 #include <string>
 
 namespace casioemu
@@ -15,15 +16,20 @@ namespace casioemu
 		if (rom_base + size > emulator.chipset.rom_data.size())
 			PANIC("Invalid ROM region: base %zx, size %zx\n", rom_base, size);
 		uint8_t *data = emulator.chipset.rom_data.data();
-		auto offset = (ssize_t) rom_base - (ssize_t) region_base;
+		auto offset = (std::ptrdiff_t) rom_base - (std::ptrdiff_t) region_base;
 		if (description.empty())
 			description = "ROM/Segment" + std::to_string(region_base >> 16);
 
-		MMURegion::WriteFunction write_function = strict_memory ? [](MMURegion *region, size_t address, uint8_t data) {
-			logger::Info("ROM::[region write lambda]: attempt to write %02hhX to %06zX\n", data, address);
-			region->emulator->HandleMemoryError();
-		} : [](MMURegion *, size_t, uint8_t) {
-		};
+		MMURegion::WriteFunction write_function;
+		if (strict_memory) {
+			write_function = [](MMURegion *region, size_t address, uint8_t data) {
+				logger::Info("ROM::[region write lambda]: attempt to write %02hhX to %06zX\n", data, address);
+				region->emulator->HandleMemoryError();
+			};
+		} else {
+			write_function = [](MMURegion *, size_t, uint8_t) {
+			};
+		}
 
 		if (offset >= 0)
 			region.Setup(region_base, size, description, data + offset, [](MMURegion *region, size_t address) {

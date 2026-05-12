@@ -33,9 +33,8 @@ namespace casioemu
 	    SDL_Renderer *renderer;
 	    SDL_Texture *interface_texture;
 
-		enum Sprite : unsigned {
-		};
-
+		static int const SPR_PIXEL = 0;
+		static int const SPR_MAX;
 		static const SpriteBitmap sprite_bitmap[];
 		std::vector<SpriteInfo> sprite_info;
 		ColourInfo ink_colour;
@@ -107,88 +106,11 @@ namespace casioemu
 	template <> const int Screen<HW_ES_PLUS>::ROW_SIZE = 16;
 	template <> const int Screen<HW_ES_PLUS>::OFFSET = 16;
 	template <> const int Screen<HW_ES_PLUS>::ROW_SIZE_DISP = 12;
+	template <> const int Screen<HW_CLASSWIZ_II>::SPR_MAX = 19;
+	template <> const int Screen<HW_CLASSWIZ>::SPR_MAX = 21;
+	template <> const int Screen<HW_ES_PLUS>::SPR_MAX = 19;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic" // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61491
-	// Note: SPR_PIXEL must be the first enum member and SPR_MAX must be the last one.
-	template <> enum Screen<HW_CLASSWIZ_II>::Sprite :unsigned
-	{
-		SPR_PIXEL,
-		SPR_S,
-		SPR_MATH,
-		SPR_D,
-		SPR_R,
-		SPR_G,
-		SPR_FIX,
-		SPR_SCI,
-		SPR_E,
-		SPR_CMPLX,
-		SPR_ANGLE,
-		SPR_WDOWN,
-		SPR_VERIFY,
-		SPR_LEFT,
-		SPR_DOWN,
-		SPR_UP,
-		SPR_RIGHT,
-		SPR_PAUSE,
-		SPR_SUN,
-		SPR_MAX
-	};
-
-	template <> enum Screen<HW_CLASSWIZ>::Sprite : unsigned
-	{
-		SPR_PIXEL,
-		SPR_S,
-		SPR_A,
-		SPR_M,
-		SPR_STO,
-		SPR_MATH,
-		SPR_D,
-		SPR_R,
-		SPR_G,
-		SPR_FIX,
-		SPR_SCI,
-		SPR_E,
-		SPR_CMPLX,
-		SPR_ANGLE,
-		SPR_WDOWN,
-		SPR_LEFT,
-		SPR_DOWN,
-		SPR_UP,
-		SPR_RIGHT,
-		SPR_PAUSE,
-		SPR_SUN,
-		SPR_MAX
-	};
-
-	template <> enum Screen<HW_ES_PLUS>::Sprite : unsigned
-	{
-		SPR_PIXEL,
-		SPR_S,
-		SPR_A,
-		SPR_M,
-		SPR_STO,
-		SPR_RCL,
-		SPR_STAT,
-		SPR_CMPLX,
-		SPR_MAT,
-		SPR_VCT,
-		SPR_D,
-		SPR_R,
-		SPR_G,
-		SPR_FIX,
-		SPR_SCI,
-		SPR_MATH,
-		SPR_DOWN,
-		SPR_UP,
-		SPR_DISP,
-		SPR_MAX
-	};
-
-#pragma GCC diagnostic pop
-
-
-	template<> const SpriteBitmap Screen<HW_CLASSWIZ_II>::sprite_bitmap[SPR_MAX] = {
+	template<> const SpriteBitmap Screen<HW_CLASSWIZ_II>::sprite_bitmap[] = {
 		{"rsd_pixel",    0,    0},
 		{"rsd_s",     0x01, 0x01},
 		{"rsd_math",  0x01, 0x03},
@@ -210,7 +132,7 @@ namespace casioemu
 		{"rsd_sun",   0x01, 0x16}
 	};
 
-	template<> const SpriteBitmap Screen<HW_CLASSWIZ>::sprite_bitmap[SPR_MAX] = {
+	template<> const SpriteBitmap Screen<HW_CLASSWIZ>::sprite_bitmap[] = {
 		{"rsd_pixel",    0,    0},
 		{"rsd_s",     0x01, 0x00},
 		{"rsd_a",     0x01, 0x01},
@@ -234,7 +156,7 @@ namespace casioemu
 		{"rsd_sun",   0x01, 0x16}
 	};
 
-	template<> const SpriteBitmap Screen<HW_ES_PLUS>::sprite_bitmap[SPR_MAX] = {
+	template<> const SpriteBitmap Screen<HW_ES_PLUS>::sprite_bitmap[] = {
 		{"rsd_pixel",    0,    0},
 		{"rsd_s",     0x10, 0x00},
 		{"rsd_a",     0x04, 0x00},
@@ -258,8 +180,6 @@ namespace casioemu
 
 	template <HardwareId hardware_id> void Screen<hardware_id>::Initialise()
 	{
-		auto constexpr SPR_MAX = Sprite::SPR_MAX;
-
 		static_assert(SPR_MAX == (sizeof(sprite_bitmap) / sizeof(sprite_bitmap[0])), "SPR_MAX and sizeof(sprite_bitmap) don't match");
 
 	    renderer = emulator.GetRenderer();
@@ -368,7 +288,7 @@ namespace casioemu
 
 		if (enable_status)
 		{
-			for (int ix = Sprite::SPR_PIXEL + 1; ix != Sprite::SPR_MAX; ++ix)
+			for (int ix = SPR_PIXEL + 1; ix != SPR_MAX; ++ix)
 			{
 				if (screen_buffer[sprite_bitmap[ix].offset] & sprite_bitmap[ix].mask)
 					SDL_SetTextureAlphaMod(interface_texture, ink_alpha_on);
@@ -380,7 +300,6 @@ namespace casioemu
 
 		if (enable_dotmatrix)
 		{
-			static constexpr auto SPR_PIXEL = Sprite::SPR_PIXEL;
 			SDL_Rect dest = Screen<hardware_id>::sprite_info[SPR_PIXEL].dest;
 			int ink_alpha = ink_alpha_off;
 			if (emulator.hardware_id == HW_CLASSWIZ_II) {

@@ -10,6 +10,7 @@
 #include <string>
 #include <chrono>
 #include <cassert>
+#include <cstdlib>
 
 namespace casioemu
 {
@@ -86,6 +87,7 @@ namespace casioemu
 		);
 		if (!window)
 			PANIC("SDL_CreateWindow failed: %s\n", SDL_GetError());
+		SDL_SetWindowMinimumSize(window, interface_background.dest.w / 4, interface_background.dest.h / 4);
 		renderer = SDL_CreateRenderer(window, -1, 0);
 		if (!renderer)
 			PANIC("SDL_CreateRenderer failed: %s\n", SDL_GetError());
@@ -344,11 +346,42 @@ namespace casioemu
 		Repaint();
 	}
 
+	void Emulator::ConstrainWindowSize(int requested_width, int requested_height, int &constrained_width, int &constrained_height)
+	{
+		const float aspect = (float)interface_background.dest.w / (float)interface_background.dest.h;
+		constrained_width = requested_width;
+		constrained_height = requested_height;
+
+		if (requested_width <= 0 || requested_height <= 0)
+			return;
+
+		const int height_from_width = (int)((float)requested_width / aspect + 0.5f);
+		const int width_from_height = (int)((float)requested_height * aspect + 0.5f);
+		const int delta_height = std::abs(height_from_width - requested_height);
+		const int delta_width = std::abs(width_from_height - requested_width);
+
+		if (delta_height <= delta_width)
+			constrained_height = height_from_width;
+		else
+			constrained_width = width_from_height;
+	}
+
 	void Emulator::WindowResize(int _width, int _height)
 	{
 		std::lock_guard<decltype(access_mx)> access_lock(access_mx);
-		width = _width;
-		height = _height;
+		int constrained_width = _width;
+		int constrained_height = _height;
+		ConstrainWindowSize(_width, _height, constrained_width, constrained_height);
+
+		if (!applying_size_constraint && (constrained_width != _width || constrained_height != _height))
+		{
+			applying_size_constraint = true;
+			SDL_SetWindowSize(window, constrained_width, constrained_height);
+			applying_size_constraint = false;
+		}
+
+		width = constrained_width;
+		height = constrained_height;
 		Frame();
 	}
 
@@ -492,12 +525,12 @@ namespace casioemu
 			++recursive_count;
 			return;
 		}
-		if (holding != std::thread::id{} or not waiting.empty())
+		if (holding != std::thread::id{} || !waiting.empty())
 		{
 			waiting.emplace();
 			auto& c = waiting.back();
 			c.wait(lock, [&]{
-				assert(not waiting.empty());
+				assert(!waiting.empty());
 				assert((holding == std::thread::id{}) == (recursive_count == 0));
 				return recursive_count == 0 && &waiting.front() == &c;
 			});
@@ -518,7 +551,7 @@ namespace casioemu
 		if (recursive_count == 0)
 		{
 			holding = {};
-			if (not waiting.empty())
+			if (!waiting.empty())
 				waiting.front().notify_one(); // the notify_one must be called while m is locked, otherwise the condition variable might be destroyed (as noted on https://en.cppreference.com/w/cpp/thread/condition_variable/notify_one)
 		}
 	}

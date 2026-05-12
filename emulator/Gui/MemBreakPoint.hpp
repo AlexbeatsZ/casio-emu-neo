@@ -4,16 +4,16 @@
 #include <unordered_map>
 #include <vector>
 
-typedef struct{
+struct MemRecord_t {
     bool Write;
     uint16_t pc;
-}MemRecord_t;
+};
 
-typedef struct {
+struct MemBPData_t {
     bool enableWrite = false;
     uint16_t addr;
     std::unordered_map<uint32_t, int> records;
-}MemBPData_t;
+};
 
 class MemBreakPoint : public UiBase
 {

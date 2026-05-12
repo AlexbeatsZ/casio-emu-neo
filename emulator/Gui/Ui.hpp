@@ -28,8 +28,12 @@ private:
     char* rom_addr;
     std::vector<UiBase*> ui_components;
     bool need_paint = false;
+    bool visible = false;
+    bool show_memory = false;
+    bool show_debug_components = false;
 
     void DockerHelper();
+    void DrawDebugControls();
 
 public:
     UI_SINGLE_HEAD(DebugUi)
@@ -44,4 +48,7 @@ public:
     void PaintUi();
 
     void PaintSDL();
+    void ToggleVisible();
+    bool IsVisible() const;
+    Uint32 GetWindowId() const;
 };

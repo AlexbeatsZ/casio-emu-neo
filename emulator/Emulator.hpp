@@ -57,6 +57,7 @@ namespace casioemu
 
 		SpriteInfo interface_background;
 		int width, height;
+		bool applying_size_constraint = false;
 
 		/**
 		 * A bunch of internally used methods for encapsulation purposes.
@@ -66,6 +67,7 @@ namespace casioemu
 		void SetupLuaAPI();
 		void SetupInternals();
 		void RunStartupScript();
+		void ConstrainWindowSize(int requested_width, int requested_height, int &constrained_width, int &constrained_height);
 
 	public:
 		SDL_Window *window;

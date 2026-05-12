@@ -3,8 +3,14 @@
 //
 
 #include "utils.h"
-#include <unistd.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <io.h>
+#define access _access
+#define F_OK 0
+#else
+#include <unistd.h>
+#endif
 
 const char *casioemu::Exception::what() const noexcept {
     return msg.c_str();
@@ -50,11 +56,10 @@ std::vector<MemoryEditor::MarkedSpan> casioemu::ParseColoredSpansConfig(const st
             sscanf(parts[2].c_str(), "%02x%02x%02x%02x", &a, &r, &g, &b); // NOLINT(*-err34-c)
         }
 
-        MemoryEditor::MarkedSpan span = {
-                .start = range_start,
-                .length = range_end - range_start + 1,
-                .color = ImColor(r, g, b, a == 0 ? 50 : a),
-        };
+        MemoryEditor::MarkedSpan span{};
+        span.start = range_start;
+        span.length = range_end - range_start + 1;
+        span.color = ImColor(r, g, b, a == 0 ? 50 : a);
         if (parts.size() == 4) {
             span.desc = parts[3];
         }

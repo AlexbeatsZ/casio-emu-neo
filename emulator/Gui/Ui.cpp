@@ -41,7 +41,7 @@ DebugUi::DebugUi()
     if (!real_hardware) {
         ram_length += 0x100;
     }
-    window = SDL_CreateWindow(EmuGloConfig[UI_TITLE], SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    window = SDL_CreateWindow(EmuGloConfig[UI_TITLE], SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, (SDL_WindowFlags)(window_flags | SDL_WINDOW_HIDDEN));
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     if (renderer == nullptr)
     {
@@ -114,6 +114,36 @@ void DebugUi::DockerHelper(){
     ImGui::End();
 }
 
+void DebugUi::DrawDebugControls()
+{
+    ImGui::SetNextWindowPos(ImVec2(8.0f, 8.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300.0f, 0.0f), ImGuiCond_FirstUseEver);
+    ImGui::Begin(EmuGloConfig[UI_TITLE]);
+    ImGui::Checkbox(EmuGloConfig[UI_MEMEDIT], &show_memory);
+    ImGui::Checkbox("Debug panels", &show_debug_components);
+    ImGui::TextUnformatted("F12: show/hide this window");
+    ImGui::End();
+}
+
+void DebugUi::ToggleVisible()
+{
+    visible = !visible;
+    if (visible)
+        SDL_ShowWindow(window);
+    else
+        SDL_HideWindow(window);
+}
+
+bool DebugUi::IsVisible() const
+{
+    return visible;
+}
+
+Uint32 DebugUi::GetWindowId() const
+{
+    return SDL_GetWindowID(window);
+}
+
 void DebugUi::PaintSDL(){
     if(!need_paint)
         return;
@@ -125,6 +155,9 @@ void DebugUi::PaintSDL(){
 }
 
 void DebugUi::PaintUi(){
+    if (!visible)
+        return;
+
     if(need_paint)
         return;
     MemoryEditor::OptionalMarkedSpans marked_spans;
@@ -140,12 +173,17 @@ void DebugUi::PaintUi(){
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
     DockerHelper();
+    DrawDebugControls();
 
     static MemoryEditor mem_edit;
     mem_edit.ReadOnly = false;
-    mem_edit.DrawWindow(EmuGloConfig[UI_MEMEDIT], rom_addr, ram_length, ram_start, marked_spans);
-    for(UiBase* a:ui_components){
-        a->Show();
+    if (show_memory) {
+        mem_edit.DrawWindow(EmuGloConfig[UI_MEMEDIT], rom_addr, ram_length, ram_start, marked_spans);
+    }
+    if (show_debug_components) {
+        for(UiBase* a:ui_components){
+            a->Show();
+        }
     }
     
     ImGui::Render();
@@ -170,6 +208,7 @@ int test_gui(){
     //SDL_Delay(1000*5);
     
     //ImGui_ImplSDL2_InitForSDLRenderer(renderer);
+    return 0;
 }
 
 // void gui_cleanup(){

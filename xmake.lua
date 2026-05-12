@@ -4,10 +4,15 @@ add_requires("imgui v1.90.5-docking",  {configs = {sdl2renderer = true}})
 target("CasioEmuX")
 
 set_kind("binary")
-set_languages("c++17")
+set_languages("c++20")
 add_files("emulator/*.cpp","emulator/*/*.cpp")
 add_packages("lua","libsdl2","libsdl2_image","python3.10")
 set_rundir("./")
 add_packages("imgui", {public = true})
+
+if is_plat("windows") then
+    add_ldflags("-mwindows", {tools = {"mingw", "gcc", "gxx", "clang", "clangxx"}})
+    add_ldflags("/subsystem:windows", {tools = {"msvc", "clang_cl"}})
+end
     
     
